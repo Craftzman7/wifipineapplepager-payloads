@@ -1,4 +1,4 @@
-# External MediaTek Chip Loader/Remover
+# External MediaTek Radio Loader/Remover
 
 A simple, robust payload for seamlessly managing external MediaTek USB Wi-Fi adapters on the WiFi Pineapple. It handles driver loading, configuration mirroring, and automatic cleanup.
 
