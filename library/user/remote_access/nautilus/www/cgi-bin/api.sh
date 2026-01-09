@@ -60,7 +60,6 @@ verify_auth() {
         exit 1
     fi
 
-    # Limit password length to prevent DoS (128 chars = 256 hex chars)
     if [ ${#encrypted_hex} -gt 256 ]; then
         echo "Content-Type: application/json"
         echo ""
@@ -68,7 +67,6 @@ verify_auth() {
         exit 1
     fi
 
-    # XOR decrypt with key wrapping (key is 64 hex chars = 32 bytes)
     local password=""
     local i=0
     local len=${#encrypted_hex}
@@ -233,7 +231,6 @@ list_payloads() {
 delete_payload() {
     local payload_path="$1"
 
-    # Security: prevent path traversal
     case "$payload_path" in
         *..*)
             echo "Content-Type: application/json"
@@ -243,7 +240,6 @@ delete_payload() {
             ;;
     esac
 
-    # Must be in /root/payloads/user/
     case "$payload_path" in
         /root/payloads/user/*) ;;
         *)
@@ -254,7 +250,6 @@ delete_payload() {
             ;;
     esac
 
-    # Must end with payload.sh
     case "$payload_path" in
         */payload.sh) ;;
         *)
@@ -265,10 +260,8 @@ delete_payload() {
             ;;
     esac
 
-    # Get the payload directory (parent of payload.sh)
     local payload_dir=$(dirname "$payload_path")
 
-    # Don't allow deleting nautilus itself
     if [ "$payload_dir" = "/root/payloads/user/remote_access/nautilus" ]; then
         echo "Content-Type: application/json"
         echo ""
@@ -276,7 +269,6 @@ delete_payload() {
         exit 1
     fi
 
-    # Check if directory exists
     if [ ! -d "$payload_dir" ]; then
         echo "Content-Type: application/json"
         echo ""
@@ -284,15 +276,59 @@ delete_payload() {
         exit 1
     fi
 
-    # Delete the payload directory
     rm -rf "$payload_dir"
 
-    # Rebuild cache
     /root/payloads/user/remote_access/nautilus/build_cache.sh >/dev/null 2>&1
 
     echo "Content-Type: application/json"
     echo ""
     echo '{"status":"deleted","path":"'"$payload_dir"'"}'
+}
+
+view_source() {
+    local payload_path="$1"
+
+    case "$payload_path" in
+        *..*)
+            echo "Content-Type: application/json"
+            echo ""
+            echo '{"error":"Security: Path traversal not allowed"}'
+            exit 1
+            ;;
+    esac
+
+    case "$payload_path" in
+        /root/payloads/user/*) ;;
+        *)
+            echo "Content-Type: application/json"
+            echo ""
+            echo '{"error":"Invalid path: must be in /root/payloads/user/"}'
+            exit 1
+            ;;
+    esac
+
+    case "$payload_path" in
+        */payload.sh) ;;
+        *)
+            echo "Content-Type: application/json"
+            echo ""
+            echo '{"error":"Invalid payload file"}'
+            exit 1
+            ;;
+    esac
+
+    if [ ! -f "$payload_path" ]; then
+        echo "Content-Type: application/json"
+        echo ""
+        echo '{"error":"Payload not found"}'
+        exit 1
+    fi
+
+    echo "Content-Type: application/json"
+    echo ""
+
+    local content=$(cat "$payload_path" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | awk '{printf "%s\\n", $0}')
+    echo "{\"content\":\"$content\",\"path\":\"$payload_path\"}"
 }
 
 run_payload() {
@@ -340,7 +376,6 @@ _nautilus_emit() {
     local color="$1"
     shift
     local text="$*"
-    # Output for web console
     if [ -n "$color" ]; then
         echo "[${color}] ${text}"
     else
@@ -359,14 +394,12 @@ LOG() {
 }
 
 ALERT() {
-    # Display in Nautilus only - don't pop up on pager
     echo "[PROMPT:alert] $*" >&2
     sleep 0.1
     _wait_response ""
 }
 
 ERROR_DIALOG() {
-    # Display in Nautilus only - don't pop up on pager
     echo "[PROMPT:error] $*" >&2
     sleep 0.1
     _wait_response ""
@@ -440,7 +473,6 @@ MAC_PICKER() {
     _wait_response "$default"
 }
 
-# Spinner functions - intercept and show in Nautilus UI instead of pager
 SPINNER() {
     echo "[SPINNER:start] $*" >&2
 }
@@ -952,7 +984,6 @@ install_github() {
             ;;
     esac
 
-    # Reject path traversal attempts
     case "$github_url" in
         *..* | *%2e%2e* | *%2E%2E* | *%2e%2E* | *%2E%2e*)
             echo "Content-Type: text/plain"
@@ -1173,7 +1204,6 @@ install_pr() {
             ;;
     esac
 
-    # Reject path traversal attempts
     case "$github_url" in
         *..* | *%2e%2e* | *%2E%2E* | *%2e%2E* | *%2E%2e*)
             echo "Content-Type: text/plain"
@@ -1392,7 +1422,6 @@ run_github() {
             ;;
     esac
 
-    # Reject path traversal attempts
     case "$github_url" in
         *..* | *%2e%2e* | *%2E%2E* | *%2e%2E* | *%2E%2e*)
             echo "Content-Type: text/plain"
@@ -1595,7 +1624,6 @@ ERROR_DIALOG() {
     _wait_response ""
 }
 
-# Spinner functions - intercept and show in Nautilus UI
 SPINNER() {
     echo "[SPINNER:start] $*" >&2
 }
@@ -1849,6 +1877,7 @@ case "$action" in
     check_local) require_auth; check_local_exists "$github_path" ;;
     stop) require_auth; stop_payload ;;
     delete_payload) require_auth; delete_payload "$rpath" ;;
+    view_source) require_auth; view_source "$rpath" ;;
     respond) require_auth; respond "$response" ;;
     refresh) require_auth; /root/payloads/user/remote_access/nautilus/build_cache.sh; echo "Content-Type: application/json"; echo ""; echo '{"status":"refreshed"}' ;;
     wifi_status) require_auth; wifi_status ;;
