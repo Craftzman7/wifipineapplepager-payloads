@@ -5,16 +5,6 @@
 # Author: beigeworm
 # Version: 1.0
 # Firmware: Developed for firmware version 1.0.4
-#
-# **SETUP**
-# 1. make a discord bot at https://discord.com/developers/applications/
-# 2. Turn on ALL intents in the 'Bot' tab.
-# 3. Give these permissions in Oauth2 tab and copy link into a browser url bar (Send-Messages, Read-messages/view-channels, Attach files)
-# 4. Add the bot to your server
-# 5. Click 'Reset Token' in "Bot" tab for your token
-# 6. Change YOUR_BOT_TOKEN_HERE below with your bot token
-# 7. Change CHANNEL_ID_HERE below to the channel ID of your channel.
-# 8. Change BOT_USER_ID_HERE below to your bots user ID.
 
 
 # -------- directory variables ----------
@@ -37,8 +27,9 @@ LOG "yellow" '| Control Your Pager Through Discord! |'
 LOG ""
 
 
-
-# ----------- setup ----------------
+# ==================================
+# - SETUP
+# ==================================
 LOG blue "1 : Starting Setup..."
 
 if [ ! -d "$DCCONTROL_DIR/logs" ] ; then
@@ -140,12 +131,14 @@ fi
 
 
 
-
-# --------- define functions ------------
+# ==================================
+# - DEFINE DISCORD FUNCTIONS
+# ==================================
 
 LOG blue "3 : Setting up Discord functions..."
 
 
+# -------------- background function --------------------
 Background_Session() {
   if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
     LOG yellow "Already running in background (pid $(cat "$PIDFILE"))"
@@ -166,8 +159,9 @@ Background_Session() {
   exit 0
 }
 
-Authenticate() {
 
+# -------------- Authenticate function --------------------
+Authenticate() {
     if [[ "$command_result" == *"$password"* ]]; then
         recent_message=$(curl -s -H "Authorization: Bot $token" "https://discord.com/api/v10/channels/$chan/messages?limit=1")
         auth_user_id=$(echo "$recent_message" | grep -o '"author":{"id":"[^"]*' | grep -o '[^"]*$')
@@ -202,6 +196,8 @@ Authenticate() {
     fi
 }
 
+
+# -------------- options function --------------------
 Option_List() {
         json_payload="{
           \"content\": \"\",
@@ -216,26 +212,8 @@ Option_List() {
         curl -X POST -H "Authorization: Bot $token" -H "Content-Type: application/json" -d "$json_payload" "https://discord.com/api/v10/channels/$chan/messages"
 }
 
-get_recent_message() {
-    recent_message=$(curl -s -H "Authorization: Bot $token" "https://discord.com/api/v10/channels/$chan/messages?limit=1")
-    user_id=$(echo "$recent_message" | grep -o '"author":{"id":"[^"]*' | grep -o '[^"]*$')
-    bot_check=$(echo "$recent_message" | grep -o '"bot":true')
-    if [ -n "$user_id" ] && [ -z "$bot_check" ]; then
-        recent_message=$(echo "$recent_message" | sed -n 's/.*"content":"\([^"]*\)".*/\1/p' | head -n 1)
-        echo "$recent_message"
-    else
-        echo ""
-    fi
-}
 
-sanitize_json() {
-    sanitized_result="${1//\"/\\\"}"
-    sanitized_result="${sanitized_result//\\/\\\\}"
-    sanitized_result="${sanitized_result//\\n/\\\\n}"
-    sanitized_result="${sanitized_result//\\ / }"
-    echo "$sanitized_result"
-}
-
+# -------------- sysinfo function --------------------
 get_linux_info() {
     os_info=$(uname -a)
     kernel_version=$(uname -r)
@@ -244,36 +222,34 @@ get_linux_info() {
     mem_info=$(free -h | grep "Mem" | awk '{print "Total: " $2, " Used: " $3}')
     disk_info=$(df -h --total | grep "total" | awk '{print "Total disk space: " $2, " Used: " $3}')
     public_ip=$(curl -s https://api.ipify.org)
-    
     linux_info="OS Info: $os_info\nKernel Version: $kernel_version\nUptime: $uptime\nCPU: $cpu_info\nMemory: $mem_info\nDisk: $disk_info\nPublic IP: $public_ip"
     echo "$linux_info"
 }
 
+
+# -------------- download function --------------------
 send_file_to_discord() {
     local file_path="$1"
     local token="$token"
-    local chan="$chan"
-    
+    local chan="$chan" 
     if [ -z "$file_path" ]; then
         echo "Error: File path not provided."
         return 1
-    fi
-    
+    fi 
     if [ ! -f "$file_path" ]; then
         echo "Error: File does not exist at $file_path."
         return 1
     fi
-    
     local file_name=$(basename "$file_path")
-
     curl -X POST \
          -H "Authorization: Bot $token" \
          -F "file=@$file_path;filename=$file_name" \
          "https://discord.com/api/v10/channels/$chan/messages"
 }
 
-download_attachment() {
 
+# ------------------ Upload function -----------------------
+download_attachment() {
     recent_message=$(curl -s -H "Authorization: Bot $token" "https://discord.com/api/v10/channels/$chan/messages?limit=1")
     user_id=$(echo "$recent_message" | grep -o '"author":{"id":"[^"]*' | grep -o '[^"]*$')
     bot_check=$(echo "$recent_message" | grep -o '"bot":true')
@@ -282,18 +258,11 @@ download_attachment() {
     else
         echo ""
     fi
-
     attachment_url=$(echo "$recent_message" | grep -oE 'https://cdn\.discordapp\.com/attachments/[^"]+')
     if [ -n "$attachment_url" ]; then
         echo "Received 'download' command with attachment URL: $attachment_url"
-        
-        # Extract the filename from the URL
         file_name=$(basename "$attachment_url")
-
-        # Download the file using curl
         curl -O -J -L "$attachment_url"
-        
-        # Check if the download was successful
         if [ $? -eq 0 ]; then
             echo "File downloaded successfully: $file_name"
         else
@@ -304,6 +273,12 @@ download_attachment() {
     fi
 }
 
+
+# ==================================
+# - DEFINE SCRIPT FUNCTIONS
+# ==================================
+
+# ------------------- Interperet messages function ----------------------
 execute_command() {
     command_result=$(eval "$1" 2>&1)
     recent_message=$(curl -s -H "Authorization: Bot $token" "https://discord.com/api/v10/channels/$chan/messages?limit=1")
@@ -397,7 +372,7 @@ execute_command() {
             curl -X POST -H "Authorization: Bot $token" -H "Content-Type: application/json" -d "$json_payload" "https://discord.com/api/v10/channels/$chan/messages"
             return
         fi
-        
+        # Batch long outputs
         if [ $? -eq 0 ]; then
             if [ -n "$command_result" ]; then
                 LOG "Shell Command Received"
@@ -445,6 +420,30 @@ execute_command() {
     fi
 }
 
+
+# ------------------- check messages ---------------------
+get_recent_message() {
+    recent_message=$(curl -s -H "Authorization: Bot $token" "https://discord.com/api/v10/channels/$chan/messages?limit=1")
+    user_id=$(echo "$recent_message" | grep -o '"author":{"id":"[^"]*' | grep -o '[^"]*$')
+    bot_check=$(echo "$recent_message" | grep -o '"bot":true')
+    if [ -n "$user_id" ] && [ -z "$bot_check" ]; then
+        recent_message=$(echo "$recent_message" | sed -n 's/.*"content":"\([^"]*\)".*/\1/p' | head -n 1)
+        echo "$recent_message"
+    else
+        echo ""
+    fi
+}
+
+# ------------------ sanitizer --------------------
+sanitize_json() {
+    sanitized_result="${1//\"/\\\"}"
+    sanitized_result="${sanitized_result//\\/\\\\}"
+    sanitized_result="${sanitized_result//\\n/\\\\n}"
+    sanitized_result="${sanitized_result//\\ / }"
+    echo "$sanitized_result"
+}
+
+# -------------- Main loop function ------------------
 Main_Loop() {
 while true; do
     recent_message=$(get_recent_message)
@@ -462,6 +461,12 @@ while true; do
 done
 }
 
+
+# ==================================
+# - START CONNECTION 
+# ==================================
+
+# ------------------------ Check and start connection ------------------------
 LOG blue "4 : Starting Connection..."
 password=""
 authenticated=0
