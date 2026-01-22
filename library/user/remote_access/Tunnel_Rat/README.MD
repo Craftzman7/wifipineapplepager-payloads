@@ -28,7 +28,7 @@ Built on WiFi Pineapple Pager firmware `v1.0.6`
 
 <a id="what-is-tunnel-jump"></a>
 ## 🐁 What is Tunnel Rat?
-Tunnel Rat is a [Hak5 WiFi Pineapple Pager](https://shop.hak5.org/products/pager) payload designed to allow an attacker remote access to a target `wpa2-psk` network via reverse `SSH` tunneling from the pager to a virtual private server (VPS) being used as a Command and Control (C2) server. This gives the attacker a root shell on the pager. The payload assumes that the target network credentials are *not* known and uses methods to allow target network handshake files to be grabbed by the attacker to crack and then pass the clear text password back to the pager, allowing the pager on the target network. The idea behind development of the payload is to allow a pager to be implanted in a target environment and left to be accessed remotely for network exploitation.
+Tunnel Rat is a [Hak5 WiFi Pineapple Pager](https://shop.hak5.org/products/pager) payload designed to allow an attacker remote access to a target `wpa2-psk` network via reverse `SSH` tunneling from the pager to a virtual private server (VPS) being used as a Command and Control (C2) server. This gives the attacker a root shell on the pager. The payload assumes that the target network credentials are *not* known and uses methods to allow target network handshake files to be grabbed by the attacker to crack and then pass the cracked password back to the pager, allowing the pager on the target network. The idea behind development of the payload is to allow a pager to be implanted in a target environment and left to be accessed remotely for network exploitation.
 
 <a id="payload-jump"></a>
 ## 🔄 Payload Workflow
@@ -104,7 +104,7 @@ Tunnel Rat is a [Hak5 WiFi Pineapple Pager](https://shop.hak5.org/products/pager
       `opkg update && opkg install -d mmc sshpass`
 
 ### Management AP
-  - The management access point is used as a method to grab handshake files and then pass the clear text (cracked) network password back to the pager. The SSID and password of the management ap must be defined in the `payload.sh` file:
+  - The management access point is used as a method to grab handshake files and then pass the cracked network password back to the pager. The SSID and password of the management ap must be defined in the `payload.sh` file:
     - Define the SSID:
       `Line 8: MAPSSID="Name-Management-Portal-SSID-Here"`
     - Define the password:
