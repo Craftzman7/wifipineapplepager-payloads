@@ -1,4 +1,3 @@
-
 #!/bin/bash
 # github.com/OSINTI4L
 # Portal Pwn is a payload for crashing/spamming ESP32 Marauder evil portals with a Hak5 WiFi Pineapple Pager. It works be throwing random data via cURL requests at the evil portal, overwhelming it, and crashing it.
