@@ -1,6 +1,6 @@
 # wiglebluetooth
 
-This payload allows you to scan BLE (Bluetooh Low Energy) devices and upload them to Wigle in a Wigle compatiable CSV file.
+This payload allows you to scan BLE (Bluetooth Low Energy) devices and upload them to Wigle in a Wigle compatiable CSV file. Bluetooth classic is not supported at this time!
 
 `wiglebluetooth` also allows you to combine a WiFi CSV produced by the pager and the CSV file produced by this payload to upload them in one go.
 
